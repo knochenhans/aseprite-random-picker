@@ -1,4 +1,4 @@
-# Aseprite Picker
+# Aseprite Random Picker
 
 Picks random layers from layer groups of an Aseprite file and saves a final png image. For example can be used to generate faces from a set of elements.
 
