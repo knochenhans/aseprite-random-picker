@@ -123,8 +123,28 @@ def generate_face(groups, palette_dict, chosen_groups, final_width=64, final_hei
     return final_image
 
 
+def create_image_grid(images, cols):
+    rows = (len(images) + cols - 1) // cols
+
+    w, h = images[0].size
+    grid = Image.new("RGBA", size=(cols * w, rows * h), color="white")
+    empty_image = Image.new("RGBA", (w, h), color="white")
+
+    for i, img in enumerate(images):
+        grid.paste(img, box=(i % cols * w, i // cols * h), mask=img)
+
+    for i in range(len(images), rows * cols):
+        grid.paste(empty_image, box=(i % cols * w, i // cols * h))
+
+    return grid
+
+
 def main(
-    input_file_path: str, output_file_path: str, config_file_path: str, count: int
+    input_file_path: str,
+    output_file_path: str,
+    config_file_path: str,
+    count: int,
+    grid: bool = False,
 ):
     with open(input_file_path, "rb") as f:
         parsed_file = AsepriteFile(f.read())
@@ -140,22 +160,33 @@ def main(
         with open(config_file_path, "r") as file:
             element_groups = json.load(file)
 
+        face_images = []
 
         for i in range(count):
             basic_elements = choose_basic_groups(element_groups)
-            face = generate_face(
-                groups, palette_dict, basic_elements, final_width, final_height
+            face_images.append(
+                generate_face(
+                    groups, palette_dict, basic_elements, final_width, final_height
+                )
             )
 
-            current_datetime = datetime.datetime.now()
-            # formatted_datetime = current_datetime.strftime("%Y%m%d_%H%M%S")
+        if grid:
+            image_grid = create_image_grid(face_images, 5)
+            image_grid.convert("RGB").resize(
+                (image_grid.width * 2, image_grid.height * 2)
+            ).save(output_file_path)
+        else:
+            for i in range(len(face_images)):
+                face = face_images[i]
+                # current_datetime = datetime.datetime.now()
+                # formatted_datetime = current_datetime.strftime("%Y%m%d_%H%M%S")
 
-            file_name, output_extension = os.path.splitext(output_file_path)
+                file_name, output_extension = os.path.splitext(output_file_path)
 
-            # filename = f"{file_name}_{formatted_datetime}-{i}{output_extension}"
-            filename = f"{file_name}_{i}{output_extension}"
+                # filename = f"{file_name}_{formatted_datetime}-{i}{output_extension}"
+                filename = f"{file_name}_{i}{output_extension}"
 
-            face.save(filename)
+                face.save(filename)
 
 
 if __name__ == "__main__":
@@ -185,10 +216,17 @@ if __name__ == "__main__":
         default=5,
         help="How many images to generate (default: 5)",
     )
+    parser.add_argument(
+        "--grid",
+        "-g",
+        type=int,
+        metavar="COL_WIDTH",
+        help="Create an image grid with the generated images. Specify the column width.",
+    )
 
     args = parser.parse_args()
 
     input_file_path = args.input_file
     output_file_path = args.output
     config_file_path = args.config
-    main(input_file_path, output_file_path, config_file_path, args.count)
+    main(input_file_path, output_file_path, config_file_path, args.count, args.grid)
